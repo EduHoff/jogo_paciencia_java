@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+
+# IDEs
+.metadata
+.idea
+.vscode
+.settings
+nbproject
+.project
+.classpath
+*.iml
+*.iws
+
+# Build output
+target
+build
+out
+nbbuild
+dist
+nbdist
+.gradle
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp
+*.tmp
+*.bak
+*.swp
+*~
+.cache-main
+.scala_dependencies
+.worksheet
+.history
+.ionide
+
+# Heap dump
+*.hprof
+
+# VSCode extensions
+*.vsix
+
+# Maven timing
+.mvn/timing.properties
