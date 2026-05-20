@@ -11,10 +11,10 @@ public class Card {
 
     public Card() {}
 
-    public Card(Rank rank, Suit suit, boolean isHidden) {
+    public Card(Rank rank, Suit suit) {
         this.rank = rank;
         this.suit = suit;
-        this.isHidden = isHidden;
+        this.isHidden = true;
     }
 
     @Override
