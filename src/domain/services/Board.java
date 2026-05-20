@@ -1,13 +1,16 @@
 package domain.services;
 
 import domain.entities.*;
+import domain.enums.Rank;
+import domain.enums.Suit;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Board {
     private final StockPile stock;
     private final WastePile waste;
-    
     private final List<FoundationPile> foundations;
     private final List<TableauPile> tableaus;
 
@@ -20,38 +23,47 @@ public class Board {
         for (int i = 0; i < 4; i++) {
             foundations.add(new FoundationPile());
         }
-
         for (int i = 0; i < 7; i++) {
             tableaus.add(new TableauPile());
         }
     }
 
     public void setupGame() {
-        // TODO: Implementar lógica de geração de cartas, embaralhar e distribuir
+        List<Card> deck = new ArrayList<>();
+
+        for (Suit suit : Suit.values()) {
+            for (Rank rank : Rank.values()) {
+                deck.add(new Card(rank, suit));
+            }
+        }
+
+        Collections.shuffle(deck);
+
+        int deckIndex = 0;
+        for (int i = 0; i < 7; i++) {
+            TableauPile currentTableau = tableaus.get(i);
+            
+            for (int j = 0; j <= i; j++) {
+                Card card = deck.get(deckIndex++);
+                
+                if (j == i) {
+                    card.setHidden(false);
+                }
+                
+                currentTableau.push(card); 
+            }
+        }
+
+        while (deckIndex < deck.size()) {
+            stock.push(deck.get(deckIndex++));
+        }
     }
 
-    public boolean moveFromWasteToTableau(int tableauIndex) {
-        // TODO: Validar se a waste não está vazia e se tableau.canPush() aceita a carta
-        return false;
-    }
 
-    public boolean moveFromWasteToFoundation(int foundationIndex) {
-        // TODO: Validar se a waste não está vazia e se foundation.canPush() aceita a carta
-        return false;
-    }
+    public void drawCard() {}
 
-    public boolean moveBetweenTableaus(int sourceIndex, int destinationIndex) {
-        // TODO: Lógica de movimentação entre colunas (respeitando as regras de cores/valores)
-        return false;
-    }
-
-    public void drawCard() {
-        // TODO: Implementar lógica de compra/reciclagem de cartas
-    }
-
-    public boolean checkWinCondition() {
-        // TODO: Implementar verificação de vitória
-        return false;
+    public boolean checkWinCondition() { 
+        return false; 
     }
 
     public StockPile getStock() { 
