@@ -1,7 +1,5 @@
 package domain.entities;
 
-import java.util.Stack;
-
 import domain.enums.Rank;
 
 public class TableauPile extends CardStack {
@@ -19,9 +17,5 @@ public class TableauPile extends CardStack {
         boolean previousRank = card.getRank().getValue() == topCard.getRank().getValue() - 1;
 
         return differentColor && previousRank;
-    }
-
-    public Stack<Card> getCardsInternal() {
-        return this.cards;
     }
 }

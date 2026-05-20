@@ -15,6 +15,7 @@ abstract public class CardStack {
     }
 
     public Card peek() {
+        if (cards.isEmpty()) return null;
         return cards.peek();
     }
 
@@ -29,9 +30,14 @@ abstract public class CardStack {
     public void push(Card card) {
         if (canPush(card)) {
             cards.push(card);
+            return;
         }
 
         throw new IllegalArgumentException("Jogada inválida para esta pilha!");
+    }
+
+    public void forcePush(Card card) {
+        this.cards.push(card);
     }
 
     public abstract boolean canPush(Card card);

@@ -21,7 +21,13 @@ public class Card {
     public String toString() {
         if(isHidden) return "[X]";
 
-        return "[" + this.rank.getSymbol() + this.suit.getSymbol() + "]";
+        String cardStr = rank.getSymbol() + suit.getSymbol();
+    
+        if (suit.isRed()) {
+            return "\u001B[31m[" + cardStr + "]\u001B[0m";
+        } else {
+            return "\u001B[37m[" + cardStr + "]\u001B[0m"; 
+        }
     }
 
     public Rank getRank() {
