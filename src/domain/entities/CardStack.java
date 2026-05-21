@@ -1,6 +1,5 @@
 package domain.entities;
 
-import java.util.Stack;
 
 abstract public class CardStack {
 
@@ -11,7 +10,10 @@ abstract public class CardStack {
     }
 
     public Card pop() {
-        return cards.pop();
+        
+        Card aux = cards.peek();
+        cards.pop();
+        return aux;
     }
 
     public Card peek() {
@@ -24,7 +26,7 @@ abstract public class CardStack {
     }
 
     public int size() {
-        return cards.size();
+        return cards.length();
     }
 
     public void push(Card card) {
@@ -41,4 +43,24 @@ abstract public class CardStack {
     }
 
     public abstract boolean canPush(Card card);
+
+    public LinkedList<Card> getCardsForRendering() {
+        LinkedList<Card> list = new LinkedList<>();
+        Stack<Card> aux = new Stack<>();
+
+        while (!this.isEmpty()) {
+            aux.push(this.pop());
+        }
+
+        while (!aux.isEmpty()) {
+            Card card = aux.peek();
+            
+            aux.pop(); 
+            this.forcePush(card);
+            
+            list.addLast(card); 
+        }
+
+        return list;
+    }
 }

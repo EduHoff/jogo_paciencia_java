@@ -2,13 +2,13 @@ package render;
 
 import domain.services.Board;
 import domain.entities.Card;
-import domain.entities.CardStack;
+import domain.entities.LinkedList;
+import domain.entities.Queue;
 import domain.entities.TableauPile;
 import utils.ConsoleUtils;
 
 import java.util.List;
 import java.util.Scanner;
-import java.util.Stack;
 
 public class GameRenderer implements GameUI {
 
@@ -29,6 +29,10 @@ public class GameRenderer implements GameUI {
         System.out.println();
         
         renderTableaus(board);
+
+        System.out.println("------------------------- LOG DO JOGO -------------------------");
+        gameLog.printLog();
+
         System.out.println("===============================================================");
     }
 
@@ -42,7 +46,7 @@ public class GameRenderer implements GameUI {
         System.out.print("Foundations: ");
         for (int i = 0; i < 4; i++) {
             var foundation = board.getFoundations().get(i);
-            String foundationStr = foundation.isEmpty() ? "[ ]" : foundation.peek().toString();
+            String foundationStr = foundation.isEmpty() ? "[f"+(i+1)+"]" : foundation.peek().toString();
             System.out.print(foundationStr + " ");
         }
         System.out.println();
@@ -63,40 +67,32 @@ public class GameRenderer implements GameUI {
             return;
         }
 
+        LinkedList<?>[] tableausLists = new LinkedList[7];
+        for (int i = 0; i < 7; i++) {
+            tableausLists[i] = tableaus.get(i).getCardsForRendering();
+        }
+
         for (int rowIndex = 0; rowIndex < maxRows; rowIndex++) {
             System.out.print("  ");
             
             for (int colIndex = 0; colIndex < 7; colIndex++) {
-                TableauPile currentTableau = tableaus.get(colIndex);
-                
+                LinkedList<?> currentList = tableausLists[colIndex];
 
-                Object[] cardsArray = currentTableau.peek() != null ? getStackAsArray(currentTableau) : null;
-
-                if (cardsArray != null && rowIndex < cardsArray.length) {
-                    Card card = (Card) cardsArray[rowIndex];
+                if (currentList != null && rowIndex < currentList.length()) {
+                    Card card = (Card) currentList.get(rowIndex);
                     
                     String cardStr = card.toString();
+
                     if (cardStr.contains("10")) {
                         System.out.print(cardStr + "   ");
                     } else {
                         System.out.print(cardStr + "    ");
                     }
                 } else {
-                    System.out.print("       ");
+                    System.out.print("       "); 
                 }
             }
             System.out.println();
-        }
-    }
-
-    private Object[] getStackAsArray(CardStack stack) {
-        try {
-            java.lang.reflect.Field field = CardStack.class.getDeclaredField("cards");
-            field.setAccessible(true);
-            Stack<?> internalStack = (Stack<?>) field.get(stack);
-            return internalStack.toArray();
-        } catch (Exception e) {
-            return new Object[0];
         }
     }
 
@@ -106,8 +102,14 @@ public class GameRenderer implements GameUI {
         return scanner.nextLine();
     }
 
+    private final Queue<String> gameLog = new Queue<>();
+
     @Override
     public void showMessage(String message) {
-        System.out.println(">> " + message);
+        gameLog.enqueue(message);
+        
+        if (gameLog.length() > 4) {
+            gameLog.dequeue();
+        }
     }
 }
