@@ -4,175 +4,202 @@ import domain.entities.*;
 import domain.enums.Rank;
 import domain.enums.Suit;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Stack;
+import java.util.Random;
 
 public class Board {
-    private final StockPile stock;
-    private final WastePile waste;
-    private final List<FoundationPile> foundations;
-    private final List<TableauPile> tableaus;
+    private final Queue<Card> monte; 
+    
+    private final Stack<Card>[] fundacoes; 
+    
+    private final LinkedList<Card>[] colunas; 
 
+    @SuppressWarnings("unchecked")
     public Board() {
-        this.stock = new StockPile();
-        this.waste = new WastePile();
-        this.foundations = new ArrayList<>();
-        this.tableaus = new ArrayList<>();
+        this.monte = new Queue<>();
+        this.fundacoes = new Stack[4];
+        this.colunas = new LinkedList[7];
         
         for (int i = 0; i < 4; i++) {
-            foundations.add(new FoundationPile());
+            fundacoes[i] = new Stack<>();
         }
         for (int i = 0; i < 7; i++) {
-            tableaus.add(new TableauPile());
+            colunas[i] = new LinkedList<>();
         }
     }
 
     public void setupGame() {
-        List<Card> deck = new ArrayList<>();
+        Card[] deck = new Card[52];
+        int idx = 0;
         for (Suit suit : Suit.values()) {
             for (Rank rank : Rank.values()) {
-                deck.add(new Card(rank, suit));
+                deck[idx++] = new Card(rank, suit);
             }
         }
 
-        Collections.shuffle(deck);
+        Random rand = new Random();
+        for (int i = deck.length - 1; i > 0; i--) {
+            int j = rand.nextInt(i + 1);
+            Card temp = deck[i];
+            deck[i] = deck[j];
+            deck[j] = temp;
+        }
 
         int deckIndex = 0;
         for (int i = 0; i < 7; i++) {
-            TableauPile currentTableau = tableaus.get(i);
             for (int j = 0; j <= i; j++) {
-                Card card = deck.get(deckIndex++);
+                Card card = deck[deckIndex++];
                 if (j == i) {
                     card.setHidden(false);
                 }
-                currentTableau.forcePush(card); 
+                colunas[i].addLast(card);
             }
         }
 
-        while (deckIndex < deck.size()) {
-            stock.forcePush(deck.get(deckIndex++));
+        while (deckIndex < deck.length) {
+            monte.enqueue(deck[deckIndex++]);
+        }
+
+        if (!monte.isEmpty()) {
+            monte.peek().setHidden(false);
         }
     }
 
-    public void drawCard() {
-        if (stock.isEmpty() && waste.isEmpty()) {
-            throw new IllegalArgumentException("Não há mais cartas no estoque ou no descarte!");
-        }
+    public void ciclarFila() {
+        if (monte.length() == 0) throw new IllegalArgumentException("O monte está vazio!");
+    
+        Card card = monte.peek();
+        card.setHidden(true);
+        monte.dequeue();
+        monte.enqueue(card);
+        
+        monte.peek().setHidden(false);
+    }
 
-        if (stock.isEmpty()) {
-            while (!waste.isEmpty()) {
-                Card card = waste.pop();
-                card.setHidden(true);
-                stock.forcePush(card);
+    public void moveFilaParaPilha(int fIdx) {
+        if (monte.length() == 0) throw new IllegalArgumentException("Monte vazio!");
+        Card card = monte.peek();
+        Stack<Card> fundacao = fundacoes[fIdx];
+
+        if (fundacao.isEmpty()) {
+            if (card.getRank() != Rank.ACE) throw new IllegalArgumentException("A pilha final deve começar com um Ás!");
+        } else {
+            Card top = fundacao.peek();
+            if (card.getSuit() != top.getSuit() || card.getRank().getValue() != top.getRank().getValue() + 1) {
+                throw new IllegalArgumentException("Carta inválida para esta pilha final!");
             }
-            return;
         }
 
-        Card card = stock.pop();
+        fundacao.push(card);
+        monte.dequeue();
+    }
+
+    public void moveFilaParaLista(int cIdx) {
+        if (monte.length() == 0) throw new IllegalArgumentException("Monte vazio!");
+        Card card = monte.peek();
+        LinkedList<Card> coluna = colunas[cIdx];
+
+        validarInsercaoColuna(card, coluna);
+
         card.setHidden(false);
-        waste.forcePush(card);
+        coluna.addLast(card);
+        monte.dequeue();
     }
 
-    public void moveFromWasteToTableau(int tableauIndex) {
-        if (waste.isEmpty()) throw new IllegalArgumentException("O descarte está vazio!");
-        TableauPile target = tableaus.get(tableauIndex);
+    public void moveListaParaPilha(int cIdx, int fIdx) {
+        LinkedList<Card> coluna = colunas[cIdx];
+        if (coluna.length() == 0) throw new IllegalArgumentException("Coluna vazia!");
         
-        target.push(waste.peek());
-        waste.pop();
+        Card card = coluna.get(coluna.length() - 1); 
+        Stack<Card> fundacao = fundacoes[fIdx];
+
+        if (fundacao.isEmpty()) {
+            if (card.getRank() != Rank.ACE) throw new IllegalArgumentException("Deve começar com Ás!");
+        } else {
+            Card top = fundacao.peek();
+            if (card.getSuit() != top.getSuit() || card.getRank().getValue() != top.getRank().getValue() + 1) {
+                throw new IllegalArgumentException("Movimento inválido para a pilha final!");
+            }
+        }
+
+        fundacao.push(card);
+        coluna.removeLast();
+        revelarNovaUltimaCarta(coluna);
     }
 
-    public void moveFromWasteToFoundation(int foundationIndex) {
-        if (waste.isEmpty()) throw new IllegalArgumentException("O descarte está vazio!");
-        FoundationPile target = foundations.get(foundationIndex);
-        
-        target.push(waste.peek());
-        waste.pop();
-    }
+    public void moveEntreListas(int srcIdx, int dstIdx, Card cartaAlvo) {
+        LinkedList<Card> src = colunas[srcIdx];
+        LinkedList<Card> dst = colunas[dstIdx];
 
-    public void moveFromTableauToFoundation(int tableauIndex, int foundationIndex) {
-        TableauPile source = tableaus.get(tableauIndex);
-        if (source.isEmpty()) throw new IllegalArgumentException("Coluna de origem vazia!");
-        
-        FoundationPile target = foundations.get(foundationIndex);
-        target.push(source.peek());
-        source.pop();
-        
-        revealTopCard(source);
-    }
+        if (src.length() == 0) throw new IllegalArgumentException("Coluna de origem vazia!");
 
-    public void moveBetweenTableaus(int sourceIndex, int destinationIndex) {
-        TableauPile source = tableaus.get(sourceIndex);
-        TableauPile target = tableaus.get(destinationIndex);
-        
-        if (source.isEmpty()) throw new IllegalArgumentException("Coluna de origem vazia!");
-
-        Object[] sourceCards = getStackAsArray(source);
-        int firstOpenIndex = -1;
-        for (int i = 0; i < sourceCards.length; i++) {
-            if (!((Card) sourceCards[i]).isHidden()) {
-                firstOpenIndex = i;
+        int targetIdx = -1;
+        for (int i = 0; i < src.length(); i++) {
+            Card c = src.get(i);
+            if (!c.isHidden() && c.equals(cartaAlvo)) {
+                targetIdx = i;
                 break;
             }
         }
 
-        if (firstOpenIndex == -1) throw new IllegalArgumentException("Nenhuma carta aberta para mover!");
+        if (targetIdx == -1) throw new IllegalArgumentException("Carta alvo não encontrada ou está oculta!");
 
-        Card baseCard = (Card) sourceCards[firstOpenIndex];
-        target.push(baseCard);
-        target.pop();
+        validarInsercaoColuna(src.get(targetIdx), dst);
 
-        Stack<Card> tempStorage = new Stack<>();
-        int itemsToMove = sourceCards.length - firstOpenIndex;
-        for (int i = 0; i < itemsToMove; i++) {
-            tempStorage.push(source.pop());
-        }
-        while (!tempStorage.isEmpty()) {
-            target.forcePush(tempStorage.pop());
+        int countToMove = src.length() - targetIdx;
+        Card[] bloco = new Card[countToMove];
+        
+        for (int i = 0; i < countToMove; i++) {
+            bloco[i] = src.get(targetIdx);
+            src.removeMiddle(targetIdx);
         }
 
-        revealTopCard(source);
+        for (Card c : bloco) {
+            dst.addLast(c);
+        }
+
+        revelarNovaUltimaCarta(src);
     }
 
-    private void revealTopCard(TableauPile tableau) {
-        if (!tableau.isEmpty() && tableau.peek().isHidden()) {
-            tableau.peek().setHidden(false);
-        }
-    }
+    private void validarInsercaoColuna(Card card, LinkedList<Card> coluna) {
+        if (coluna.length() == 0) {
+            if (card.getRank() != Rank.KING) throw new IllegalArgumentException("Espaços vazios só aceitam Reis!");
+        } else {
+            Card top = coluna.get(coluna.length() - 1);
+            if (top.isHidden()) throw new IllegalArgumentException("A carta de destino está virada para baixo!");
+            
+            boolean corDiferente = card.getSuit().isRed() != top.getSuit().isRed();
+            boolean valorDecrescente = card.getRank().getValue() == top.getRank().getValue() - 1;
 
-    public boolean checkWinCondition() { 
-        int totalCardsInFoundations = 0;
-        for (FoundationPile fp : foundations) {
-            totalCardsInFoundations += fp.size();
-        }
-        return totalCardsInFoundations == 52; 
-    }
-
-    private Object[] getStackAsArray(CardStack stack) {
-        try {
-            java.lang.reflect.Field field = CardStack.class.getDeclaredField("cards");
-            field.setAccessible(true);
-            Stack<?> internalStack = (Stack<?>) field.get(stack);
-            return internalStack.toArray();
-        } catch (Exception e) {
-            return new Object[0];
+            if (!corDiferente || !valorDecrescente) {
+                throw new IllegalArgumentException("As colunas exigem cores alternadas e ordem decrescente!");
+            }
         }
     }
 
-    public StockPile getStock() { 
-        return stock;
+    private void revelarNovaUltimaCarta(LinkedList<Card> coluna) {
+        if (coluna.length() > 0) {
+            Card ultima = coluna.get(coluna.length() - 1);
+            if (ultima.isHidden()) {
+                ultima.setHidden(false);
+            }
+        }
     }
 
-    public WastePile getWaste() { 
-        return waste; 
-    }
-    
-    public List<FoundationPile> getFoundations() { 
-        return foundations; 
+    public boolean checkWinCondition() {
+        int total = 0;
+        for (Stack<Card> f : fundacoes) total += f.length();
+        return total == 52;
     }
 
-    public List<TableauPile> getTableaus() { 
-        return tableaus; 
+    public Queue<Card> getMonte() { 
+        return monte; 
+    }
+
+    public Stack<Card>[] getFundacoes() { 
+        return fundacoes; 
+    }
+
+    public LinkedList<Card>[] getColunas() { 
+        return colunas; 
     }
 }
